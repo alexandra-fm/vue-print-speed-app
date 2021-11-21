@@ -1,16 +1,16 @@
 <template>
   <div class="checked-block">
-    <!-- <a href="https://router.vuejs.org" target="_blank" rel="noopener"
-      >vue-router</a
-    > -->
     <input
+      ref="mainInput"
       class="checked-text"
       type="text"
       autocomplete="off"
       v-model="textEntered"
+      @keydown="prevent"
+      @keydown.once="initStopwatch"
     />
     <div class="main-block">
-      <div class="main-text">
+      <div class="main-text" @click="setFocusInput">
         <span
           v-for="(letter, index) in textChecked"
           :key="index"
@@ -18,6 +18,7 @@
           :class="{
             'right-letter': index === rightLetter,
             'wrong-letter': index === wrongLetter,
+            'checked-letter': checkedLetters.includes(index),
           }"
           >{{ letter }}</span
         >
@@ -31,7 +32,7 @@
           <span>точность</span>
           <span>{{ accuracyChecked }}%</span>
         </div>
-        <button class="button" @click="test">заново</button>
+        <button class="button" @click="repeatCheck">повторить</button>
       </div>
     </div>
   </div>
@@ -40,83 +41,123 @@
 <script>
 export default {
   name: "PrintedPage",
+  props: {
+    textChecked: {
+      type: Array,
+      required: true,
+    },
+    url: {
+      type: String,
+      required: false,
+    },
+  },
   data: () => ({
-    textChecked: [],
-    textEntered: "",
+    textEntered: null,
     speedChecked: 0,
     accuracyChecked: 100,
     selectedLetter: false,
     rightLetter: null,
     wrongLetter: null,
+    checkedLetters: [],
+    mistakesCount: [],
+    timeStart: null,
+    initInterval: null,
+    stopwatch: 0,
+    buttonPrevent: [
+      "ArrowUp",
+      "ArrowDown",
+      "ArrowLeft",
+      "ArrowRight",
+      "Backspace",
+      "Tab",
+    ],
   }),
   mounted() {
-    const requestURLWithParams =
-      "https://fish-text.ru/get?&type=sentence&number=3"
-    this.sendRequest("GET", requestURLWithParams)
-      .then(data => (this.textChecked = data.text.split("")))
-      .catch(err => console.log(err))
+    this.setRightLetter(0)
+    this.setFocusInput()
   },
   watch: {
     textEntered: function () {
+      if (!this.textEntered) return
       let letterEntered = this.textEntered.slice(-1)
-      let index = this.textEntered.length - 1
-      let letterGiven = this.textChecked[index]
-      //console.log(letterEntered)
-      //console.log(letterGiven)
-      console.log("OK", this.wrongLetter)
+      let indexCurrent = this.textEntered.length - 1
+      let letterChecked = this.textChecked[indexCurrent]
 
-      if (letterEntered === letterGiven) {
-        this.rightLetter = index
-        this.wrongLetter = null
-
-        // return console.log("OK")
+      if (letterEntered === this.textChecked[this.textChecked.length - 1]) {
+        clearInterval(this.initInterval)
       }
 
-      if (letterEntered !== letterGiven && this.textEntered) {
-        // console.log("OK-2")
+      if (letterEntered === letterChecked) {
+        this.setRightLetter(indexCurrent + 1)
+        this.setCheckedLetters(indexCurrent + 1)
+      }
+      if (letterEntered !== letterChecked && this.textEntered) {
         this.textEntered = this.textEntered.slice(0, -1)
-
-        this.$nextTick(() => {
-          this.rightLetter = null
-          this.wrongLetter = index
-        })
-        //setTimeout(() => (this.textEntered = this.textEntered.slice(0, -1)), 10)
-        console.log(index)
+        this.setWrongLetter(indexCurrent)
+        this.changeAccuracy(indexCurrent)
       }
     },
-    /* textChecked: function () {
-      let checkedArr = this.textChecked.split("")
-      console.log(checkedArr, this.textChecked)
-      for (let i = 0; i < checkedArr.length; i++) {
-        if (checkedArr[i] === this.textGiven[i]) {
-          console.log(
-            checkedArr[i],
-            this.textGiven[i],
-            checkedArr[i] === this.textGiven[i]
-          )
-        }
-        if (checkedArr[i] !== this.textGiven[i]) {
-          console.log("вызван второй if")
-          return (this.textChecked = this.textChecked.slice(0, -1))
-        }
-      }
-    }, */
   },
   methods: {
-    sendRequest(method, url) {
-      return fetch(url).then(response => response.json())
+    //В данном методе произвела сброс всех данных в data и повторные вызовы методов, чтобы уйти от перезагрузки всей страницы. Можно было просто перезагрузить всю страницу с помощью window.location.reload()
+    repeatCheck() {
+      this.$emit("repeatCheck", "GET", this.url)
+      this.textEntered = null
+      this.speedChecked = 0
+      this.accuracyChecked = 100
+      this.selectedLetter = false
+      this.wrongLetter = null
+      this.checkedLetters = []
+      this.mistakesCount = []
+      this.timeStart = null
+      this.initInterval = null
+      this.stopwatch = 0
+      this.initStopwatch()
+      this.setFocusInput()
+      this.setRightLetter(0)
     },
-    test() {
-      let checkedArr = ["А", " ", "р"]
-      for (let i = 0; i < checkedArr.length; i++) {
-        console.log(
-          checkedArr.length,
-          checkedArr[i],
-          this.textGiven[i],
-          checkedArr[i] === this.textGiven[i]
-        )
-        //if (checkedArr[i] === this.textGiven[i]) return console.log("1", true)
+    prevent(e) {
+      if (this.buttonPrevent.includes(e.code)) {
+        e.preventDefault()
       }
+    },
+    setRightLetter(index) {
+      this.rightLetter = index
+      this.wrongLetter = null
+    },
+    setWrongLetter(index) {
+      this.$nextTick(() => {
+        this.rightLetter = null
+        this.wrongLetter = index
+      })
+    },
+    setCheckedLetters(index) {
+      if (this.checkedLetters.includes(index - 1)) return
+      this.checkedLetters.push(index - 1)
+    },
+    setFocusInput() {
+      this.$refs.mainInput.focus()
+    },
+    changeAccuracy(index) {
+      let inaccuracy = (100 / this.textChecked.length).toFixed(1)
+
+      if (!this.mistakesCount.includes(index)) {
+        this.accuracyChecked = (this.accuracyChecked - inaccuracy).toFixed(1)
+        this.mistakesCount.push(index)
+      }
+      return
+    },
+    changeSpeed() {
+      let minutePassed = this.stopwatch * 0.0166667
+      this.speedChecked = Math.round(this.textEntered.length / minutePassed)
+    },
+    initStopwatch() {
+      this.initInterval = setInterval(() => {
+        if (this.textEntered) {
+          this.stopwatch++
+          this.changeSpeed()
+        }
+      }, 1000)
     },
   },
 }
@@ -127,7 +168,6 @@ export default {
   position: relative;
   width: 100%;
   max-width: 940px;
-  height: 1200px;
   margin-top: 70px;
 }
 .main-block {
@@ -147,23 +187,29 @@ export default {
   letter-spacing: 0.5px;
   text-align: left;
   color: #838689 !important;
-}
-.selected-letter {
-  padding: 3px 2px;
-  color: #f1f3f4;
-  background-color: #1a73e8;
-  border-radius: 2px;
+  cursor: text;
 }
 .main-status {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
+  min-width: 170px;
   font-size: 16px;
   font-weight: 500;
   letter-spacing: 0.7px;
   text-transform: uppercase;
-  min-width: 170px;
+  color: #838689;
+}
+.checked-text {
+  position: absolute;
+  height: 1px;
+  overflow: hidden;
+  outline: 0;
+  border: none;
+  color: transparent;
+  background-color: transparent;
+  caret-color: transparent;
 }
 .checked-speed,
 .checked-accuracy {
@@ -188,18 +234,18 @@ export default {
   box-shadow: 0px 0px 2px 0px rgba(0, 0, 0, 0.2);
 }
 .right-letter {
-  padding: 3px 2px;
+  padding: 0px 2px;
   color: #f1f3f4;
   background-color: #1a73e8;
   border-radius: 2px;
 }
 .wrong-letter {
-  padding: 3px 2px;
+  padding: 0px 2px;
   color: #f1f3f4;
   background-color: #d92d28;
   border-radius: 2px;
 }
 .checked-letter {
-  color: #4d5053;
+  color: #1a73e8;
 }
 </style>
