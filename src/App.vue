@@ -1,41 +1,43 @@
 <template>
   <div id="app">
-    <Navbar />
+    <the-navbar />
     <button
-      v-if="!isStartChecking"
       class="button"
+      v-if="!isStartChecking"
       @click="
-        ;(isStartChecking = !isStartChecking),
-          sendRequest('GET', requestURLWithParams)
+        isStartChecking = !isStartChecking
+        sendRequest('GET', requestURLWithParams)
       "
     >
       Начать
     </button>
-    <PrintedPage
+    <printed-page
       v-if="isStartChecking"
-      ref="setFocusInPrintedPage"
+      :key="numberOfAttempts"
       :textChecked="textChecked"
-      :url="requestURLWithParams"
-      @repeatCheck="sendRequest"
+      @reRerenderComponent="reRerenderComponent"
     />
   </div>
 </template>
 
 <script>
-import Navbar from "./components/Navbar.vue"
+import TheNavbar from "./components/TheNavbar.vue"
 import PrintedPage from "./components/PrintedPage.vue"
 
 export default {
   name: "App",
   components: {
-    Navbar,
+    TheNavbar,
     PrintedPage,
   },
-  data: () => ({
-    isStartChecking: false,
-    textChecked: [],
-    requestURLWithParams: "https://fish-text.ru/get?&type=sentence&number=2",
-  }),
+  data() {
+    return {
+      numberOfAttempts: 0,
+      isStartChecking: false,
+      textChecked: [],
+      requestURLWithParams: "https://fish-text.ru/get?&type=sentence&number=2",
+    }
+  },
   methods: {
     //Запрос на сервер реализовала в App, т.к. приложение небольшое и запрос всего один. Если было ба более сложное приложение, вынесла в отдельный файл
     sendRequest(method, url) {
@@ -43,6 +45,10 @@ export default {
         .then(response => response.json())
         .then(data => (this.textChecked = data.text.split("")))
         .catch(err => console.log(err))
+    },
+    reRerenderComponent() {
+      this.sendRequest("GET", this.requestURLWithParams)
+      this.numberOfAttempts += 1
     },
   },
 }

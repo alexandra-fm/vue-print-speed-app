@@ -1,10 +1,10 @@
 <template>
   <div class="checked-block">
     <input
-      ref="mainInput"
       class="checked-text"
       type="text"
       autocomplete="off"
+      ref="mainInput"
       v-model="textEntered"
       @keydown="prevent"
       @keydown.once="initStopwatch"
@@ -14,7 +14,6 @@
         <span
           v-for="(letter, index) in textChecked"
           :key="index"
-          :data-index="index"
           :class="{
             'right-letter': index === rightLetter,
             'wrong-letter': index === wrongLetter,
@@ -32,7 +31,7 @@
           <span>точность</span>
           <span>{{ accuracyChecked }}%</span>
         </div>
-        <button class="button" @click="repeatCheck">повторить</button>
+        <button class="button" @click="reRerenderComponent">повторить</button>
       </div>
     </div>
   </div>
@@ -46,39 +45,34 @@ export default {
       type: Array,
       required: true,
     },
-    url: {
-      type: String,
-      required: false,
-    },
   },
-  data: () => ({
-    textEntered: null,
-    speedChecked: 0,
-    accuracyChecked: 100,
-    selectedLetter: false,
-    rightLetter: null,
-    wrongLetter: null,
-    checkedLetters: [],
-    mistakesCount: [],
-    timeStart: null,
-    initInterval: null,
-    stopwatch: 0,
-    buttonPrevent: [
-      "ArrowUp",
-      "ArrowDown",
-      "ArrowLeft",
-      "ArrowRight",
-      "Backspace",
-      "Tab",
-    ],
-  }),
-  mounted() {
-    this.setRightLetter(0)
-    this.setFocusInput()
+  data() {
+    return {
+      textEntered: null,
+      speedChecked: 0,
+      accuracyChecked: 100,
+      selectedLetter: false,
+      rightLetter: null,
+      wrongLetter: null,
+      checkedLetters: [],
+      mistakesCount: [],
+      timeStart: null,
+      initInterval: null,
+      stopwatch: 0,
+      buttonPrevent: [
+        "ArrowUp",
+        "ArrowDown",
+        "ArrowLeft",
+        "ArrowRight",
+        "Backspace",
+        "Tab",
+      ],
+    }
   },
   watch: {
     textEntered: function () {
       if (!this.textEntered) return
+
       let letterEntered = this.textEntered.slice(-1)
       let indexCurrent = this.textEntered.length - 1
       let letterChecked = this.textChecked[indexCurrent]
@@ -98,23 +92,13 @@ export default {
       }
     },
   },
+  mounted() {
+    this.setRightLetter(0)
+    this.setFocusInput()
+  },
   methods: {
-    //В данном методе произвела сброс всех данных в data и повторные вызовы методов, чтобы уйти от перезагрузки всей страницы. Можно было просто перезагрузить всю страницу с помощью window.location.reload()
-    repeatCheck() {
-      this.$emit("repeatCheck", "GET", this.url)
-      this.textEntered = null
-      this.speedChecked = 0
-      this.accuracyChecked = 100
-      this.selectedLetter = false
-      this.wrongLetter = null
-      this.checkedLetters = []
-      this.mistakesCount = []
-      this.timeStart = null
-      this.initInterval = null
-      this.stopwatch = 0
-      this.initStopwatch()
-      this.setFocusInput()
-      this.setRightLetter(0)
+    reRerenderComponent() {
+      this.$emit("reRerenderComponent")
     },
     prevent(e) {
       if (this.buttonPrevent.includes(e.code)) {
