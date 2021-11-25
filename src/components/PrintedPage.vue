@@ -6,7 +6,7 @@
       autocomplete="off"
       ref="mainInput"
       v-model="textEntered"
-      @keydown="prevent"
+      @keydown="checkPrevent"
       @keydown.once="initStopwatch"
     />
     <div class="main-block">
@@ -38,14 +38,10 @@
 </template>
 
 <script>
+import { mapActions, mapGetters } from "vuex"
+
 export default {
   name: "PrintedPage",
-  props: {
-    textChecked: {
-      type: Array,
-      required: true,
-    },
-  },
   data() {
     return {
       textEntered: null,
@@ -68,6 +64,9 @@ export default {
         "Tab",
       ],
     }
+  },
+  computed: {
+    ...mapGetters({ textChecked: "getLettersArr" }),
   },
   watch: {
     textEntered: function () {
@@ -96,11 +95,16 @@ export default {
     this.setRightLetter(0)
     this.setFocusInput()
   },
+  beforeDestroy() {
+    clearInterval(this.initInterval)
+  },
   methods: {
+    ...mapActions(["getText"]),
+
     reRerenderComponent() {
       this.$emit("reRerenderComponent")
     },
-    prevent(e) {
+    checkPrevent(e) {
       if (this.buttonPrevent.includes(e.code)) {
         e.preventDefault()
       }
@@ -129,7 +133,6 @@ export default {
         this.accuracyChecked = (this.accuracyChecked - inaccuracy).toFixed(1)
         this.mistakesCount.push(index)
       }
-      return
     },
     changeSpeed() {
       let minutePassed = this.stopwatch * 0.0166667

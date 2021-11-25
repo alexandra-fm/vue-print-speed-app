@@ -1,20 +1,12 @@
 <template>
   <div id="app">
     <the-navbar />
-    <button
-      class="button"
-      v-if="!isStartChecking"
-      @click="
-        isStartChecking = !isStartChecking
-        sendRequest('GET', requestURLWithParams)
-      "
-    >
-      Начать
+    <button class="button" v-if="!isStartChecking" @click="startTest">
+      Начать печатать
     </button>
     <printed-page
       v-if="isStartChecking"
       :key="numberOfAttempts"
-      :textChecked="textChecked"
       @reRerenderComponent="reRerenderComponent"
     />
   </div>
@@ -23,6 +15,7 @@
 <script>
 import TheNavbar from "./components/TheNavbar.vue"
 import PrintedPage from "./components/PrintedPage.vue"
+import { mapActions } from "vuex"
 
 export default {
   name: "App",
@@ -34,20 +27,16 @@ export default {
     return {
       numberOfAttempts: 0,
       isStartChecking: false,
-      textChecked: [],
-      requestURLWithParams: "https://fish-text.ru/get?&type=sentence&number=2",
     }
   },
   methods: {
-    //Запрос на сервер реализовала в App, т.к. приложение небольшое и запрос всего один. Если было ба более сложное приложение, вынесла в отдельный файл
-    sendRequest(method, url) {
-      return fetch(url)
-        .then(response => response.json())
-        .then(data => (this.textChecked = data.text.split("")))
-        .catch(err => console.log(err))
+    ...mapActions(["getText"]),
+    startTest() {
+      this.getText()
+      this.isStartChecking = !this.isStartChecking
     },
     reRerenderComponent() {
-      this.sendRequest("GET", this.requestURLWithParams)
+      this.getText()
       this.numberOfAttempts += 1
     },
   },
@@ -70,7 +59,7 @@ export default {
   color: #4d5053;
 }
 .button {
-  width: 170px;
+  width: 210px;
   padding: 10px 18px;
   margin-top: 70px;
   font-size: 16px;
